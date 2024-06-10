@@ -1,0 +1,318 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <random>
+#include <ctime>
+
+// Характеристики персонажа
+struct Stats
+{
+    int health = 0;
+    int armor = 0;
+    int strength = 0;
+    int intelligence = 0;
+    int agility = 0;
+    int accuracy = 0;
+    int luck = 0;
+    int mastery = 0;
+};
+
+// Классы персонажей
+enum class CharacterClass { Defender, Healer, MeleeFighter, RangedFighter };
+
+// Для хранения случайных значений
+int random_value1 = 0;
+int random_value2 = 0;
+int random_value3 = 0;
+
+bool useStoredRandoms = false;  // флаг для отслеживания первого/второго вызова
+
+// Структура для хранения предмета экипировки
+struct Equipment
+{
+    std::string name;
+    Stats stats;
+};
+
+// Базовый класс персонажа
+class Character
+{
+public:
+    CharacterClass characterClass;
+    Stats baseStats;
+    std::vector<Equipment> equipment;
+    std::string name;
+
+    Character(CharacterClass cls, const std::string& name) : characterClass(cls), name(name)
+    {
+        // Инициализация базовых характеристик в зависимости от класса
+        switch (cls)
+        {
+        case CharacterClass::Defender:
+            baseStats.health = 90;
+            baseStats.armor = 70;
+            baseStats.strength = 30;
+            baseStats.agility = 5;
+            baseStats.intelligence = 10;
+            baseStats.accuracy = 10;
+            baseStats.luck = 30;
+            baseStats.mastery = 30;
+            break;
+        case CharacterClass::Healer:
+            baseStats.health = 30;
+            baseStats.armor = 20;
+            baseStats.strength = 50;
+            baseStats.agility = 20;
+            baseStats.intelligence = 75;
+            baseStats.accuracy = 30;
+            baseStats.luck = 70;
+            baseStats.mastery = 30;
+            break;
+        case CharacterClass::MeleeFighter:
+            baseStats.health = 50;
+            baseStats.armor = 50;
+            baseStats.strength = 75;
+            baseStats.agility = 70;
+            baseStats.intelligence = 40;
+            baseStats.accuracy = 30;
+            baseStats.luck = 30;
+            baseStats.mastery = 30;
+            break;
+        case CharacterClass::RangedFighter:
+            baseStats.health = 40;
+            baseStats.armor = 30;
+            baseStats.strength = 40;
+            baseStats.agility = 30;
+            baseStats.intelligence = 75;
+            baseStats.accuracy = 70;
+            baseStats.luck = 30;
+            baseStats.mastery = 30;
+            break;
+        }
+    }
+
+    // Вычисление общего урона/лечения
+    int calculateDamageOrHealing() const
+    {
+        int primaryAttribute = 0;
+        switch (characterClass)
+        {
+        case CharacterClass::Defender:
+            primaryAttribute = baseStats.strength + getTotalEquipmentStats().strength;
+            break;
+        case CharacterClass::Healer:
+            primaryAttribute = baseStats.intelligence + getTotalEquipmentStats().intelligence;
+            break;
+        case CharacterClass::MeleeFighter:
+            primaryAttribute = baseStats.strength + getTotalEquipmentStats().strength;
+            break;
+        case CharacterClass::RangedFighter:
+            primaryAttribute = baseStats.intelligence + getTotalEquipmentStats().intelligence;
+            break;
+        }
+
+        if (!useStoredRandoms)
+        {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_real_distribution<> dis(1, 100);
+
+            random_value1 = dis(gen);
+            random_value2 = dis(gen);
+            random_value3 = dis(gen);
+
+            useStoredRandoms = true;  // Установить флаг для следующего вызова
+        }
+        else
+        {
+            useStoredRandoms = false;  // Сбросить флаг для нового случайного числа при следующем вызове
+        }
+
+        int newDamageOrHeal = primaryAttribute;
+
+        if (random_value1 > getTotalEquipmentStats().accuracy)
+            if (primaryAttribute > 50)
+                newDamageOrHeal -= 20;
+            else
+                newDamageOrHeal /= 2;
+
+        if (random_value2 <= getTotalEquipmentStats().luck)
+            newDamageOrHeal *= 2;
+
+        if (random_value3 <= getTotalEquipmentStats().mastery)
+            newDamageOrHeal += 30;
+
+        return newDamageOrHeal;
+    }
+
+    // Вычисление общих характеристик
+    Stats getTotalStats() const
+    {
+        Stats totalStats = baseStats;
+        Stats equipmentStats = getTotalEquipmentStats();
+
+        totalStats.health += equipmentStats.health;
+        totalStats.armor += equipmentStats.armor;
+        totalStats.strength += equipmentStats.strength;
+        totalStats.intelligence += equipmentStats.intelligence;
+        totalStats.agility += equipmentStats.agility;
+        totalStats.accuracy += equipmentStats.accuracy;
+        totalStats.luck += equipmentStats.luck;
+        totalStats.mastery += equipmentStats.mastery;
+        return totalStats;
+    }
+
+    // Вывод информации об экипировке
+    void printEquipment() const
+    {
+        for (const auto& item : equipment)
+        {
+            std::cout << item.name << ": Health: " << item.stats.health
+                << ", Armor: " << item.stats.armor << ",\n"
+                << "Strength: " << item.stats.strength
+                << ", Intelligence: " << item.stats.intelligence
+                << ", Agility: " << item.stats.agility << ",\n"
+                << "Accuracy: " << item.stats.accuracy
+                << ", Luck: " << item.stats.luck
+                << ", Mastery: " << item.stats.mastery << "\n\n";
+        }
+    }
+
+private:
+    // Вычисление общих характеристик экипировки
+    Stats getTotalEquipmentStats() const
+    {
+        Stats totalEquipmentStats;
+        for (const auto& item : equipment)
+        {
+            totalEquipmentStats.health += item.stats.health;
+            totalEquipmentStats.armor += item.stats.armor;
+            totalEquipmentStats.strength += item.stats.strength;
+            totalEquipmentStats.intelligence += item.stats.intelligence;
+            totalEquipmentStats.agility += item.stats.agility;
+            totalEquipmentStats.accuracy += item.stats.accuracy;
+            totalEquipmentStats.luck += item.stats.luck;
+            totalEquipmentStats.mastery += item.stats.mastery;
+        }
+        return totalEquipmentStats;
+    }
+};
+
+// Генерация случайной экипировки
+std::vector<Equipment> generateRandomEquipment()
+{
+    std::vector<Equipment> equipmentList;
+    std::default_random_engine generator(static_cast<unsigned>(time(0)));
+    std::uniform_int_distribution<int> dist(1, 30);
+
+    auto generateStats = [&dist, &generator]() -> Stats {
+        Stats stats;
+        stats.health = dist(generator);
+        stats.armor = dist(generator);
+
+        std::uniform_int_distribution<int> primaryDist(0, 2);
+        switch (primaryDist(generator))
+        {
+        case 0:
+            stats.intelligence = dist(generator);
+            break;
+        case 1:
+            stats.strength = dist(generator);
+            break;
+        case 2:
+            stats.agility = dist(generator);
+            break;
+        }
+
+        std::uniform_int_distribution<int> secondaryDist(0, 2);
+        switch (secondaryDist(generator))
+        {
+        case 0:
+            stats.mastery = dist(generator);
+            break;
+        case 1:
+            stats.accuracy = dist(generator);
+            break;
+        case 2:
+            stats.luck = dist(generator);
+            break;
+        }
+
+        return stats;
+        };
+
+    equipmentList.push_back({ "Helmet", generateStats() });
+    equipmentList.push_back({ "Chestplate", generateStats() });
+    equipmentList.push_back({ "Cloak", generateStats() });
+    equipmentList.push_back({ "Gloves", generateStats() });
+
+    return equipmentList;
+}
+
+int main()
+{
+    try
+    {
+        std::vector<Character> characters;
+
+        // Создание случайных персонажей
+        characters.emplace_back(CharacterClass::Defender, "Tank");
+        characters.emplace_back(CharacterClass::Healer, "Witch");
+        characters.emplace_back(CharacterClass::MeleeFighter, "Swordsman");
+        characters.emplace_back(CharacterClass::RangedFighter, "Archer");
+
+        for (auto& character : characters)
+        {
+            int damageOrHealingWithoutEquipment = character.calculateDamageOrHealing();
+
+            // Генерация экипировки и присвоение её персонажу
+            character.equipment = generateRandomEquipment();
+
+            // Вывод информации о персонаже
+            std::cout << "Character: " << character.name << "\n";
+            std::cout << "Class: ";
+            switch (character.characterClass)
+            {
+            case CharacterClass::Defender: std::cout << "Defender\n\n"; break;
+            case CharacterClass::Healer: std::cout << "Healer\n\n"; break;
+            case CharacterClass::MeleeFighter: std::cout << "Melee Fighter\n\n"; break;
+            case CharacterClass::RangedFighter: std::cout << "Ranged Fighter\n\n"; break;
+            }
+            std::cout << "Base Stats: Health: " << character.baseStats.health
+                << ", Armor: " << character.baseStats.armor << ",\n"
+                << "Strength: " << character.baseStats.strength
+                << ", Intelligence: " << character.baseStats.intelligence
+                << ", Agility: " << character.baseStats.agility << ",\n"
+                << "Accuracy: " << character.baseStats.accuracy
+                << ", Luck: " << character.baseStats.luck
+                << ", Mastery: " << character.baseStats.mastery << "\n\n";
+
+            Stats totalStats = character.getTotalStats();
+            std::cout << "Total Stats with Equipment: Health: " << totalStats.health
+                << ", Armor: " << totalStats.armor << ",\n"
+                << "Strength: " << totalStats.strength
+                << ", Intelligence: " << totalStats.intelligence
+                << ", Agility: " << totalStats.agility << ",\n"
+                << "Accuracy: " << totalStats.accuracy
+                << ", Luck: " << totalStats.luck
+                << ", Mastery: " << totalStats.mastery << "\n\n";
+
+            int damageOrHealingWithEquipment = character.calculateDamageOrHealing();
+
+            std::cout << "Damage/Healing without equipment: " << damageOrHealingWithoutEquipment << "\n";
+            std::cout << "Damage/Healing with equipment: " << damageOrHealingWithEquipment << "\n\n";
+
+            // Вывод информации об экипировке
+            std::cout << "Equipment:\n\n";
+            character.printEquipment();
+            std::cout << "---------------------------------------------------\n";
+        }
+    }
+    catch (std::exception)
+    {
+        std::cout << "Программа рухнула";
+        return 1;
+    }
+
+    return 0;
+}
