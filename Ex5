@@ -1,0 +1,153 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <algorithm>
+
+struct Contract
+{
+    int number;
+    std::string startDate;
+    std::string endDate;
+    std::string work;
+    int cost;
+};
+
+struct Employee
+{
+    std::string lastName;
+    std::string firstName;
+    std::string middleName;
+    std::vector<Contract> contracts;
+};
+
+void parseFile(std::map<std::string, Employee>& employees)
+{
+    std::ifstream file("data.txt");
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        if (line.empty()) continue;
+
+        std::istringstream nameStream(line);
+        std::string lastName, firstName, middleName;
+        nameStream >> lastName >> firstName >> middleName;
+
+        Employee employee = { lastName, firstName, middleName };
+
+        while (std::getline(file, line) && line != "}")
+        {
+            if (line.empty()) continue;
+            if (line == "{") continue;
+
+            Contract contract;
+            std::istringstream contractStream(line);
+            std::string temp, ctNumber, ctDate1, ctDate2, ctWork, ctCost;
+            contractStream >> temp >> ctNumber >> temp >> ctDate1 >> temp >> ctDate2
+                >> temp >> ctWork >> temp >> ctCost;
+
+            if (ctCost.find(';') != ctCost.npos)
+            {
+                size_t x = ctCost.find(';');
+                ctCost.erase(x, 1);
+            }
+            if (ctNumber.find('№') != ctNumber.npos)
+            {
+                size_t x = ctNumber.find('№');
+                ctNumber.erase(x, 1);
+            }
+
+            if (ctDate2 == "нв")
+                ctDate2 = "today";
+
+            contract.number = std::stoi(ctNumber);
+            contract.startDate = ctDate1;
+            contract.endDate = ctDate2;
+            contract.work = ctWork;
+            contract.cost = std::stoi(ctCost);
+
+            employee.contracts.push_back(contract);
+        }
+
+        std::string fullName = lastName + " " + firstName + " " + middleName;
+        employees[fullName] = employee;
+    }
+}
+
+int calculateTotalCost(const Employee& employee)
+{
+    int totalCost = 0;
+    for (const auto& contract : employee.contracts)
+    {
+        totalCost += contract.cost;
+    }
+    return totalCost;
+}
+
+std::vector<Contract> listContracts(const Employee& employee)
+{
+    return employee.contracts;
+}
+
+Contract findLongestContract(const Employee& employee)
+{
+    return *std::max_element(employee.contracts.begin(), employee.contracts.end(), [](const Contract& a, const Contract& b) {return a.endDate < b.endDate;});
+}
+
+Contract findMostExpensiveContract(const Employee& employee)
+{
+    return *std::max_element(employee.contracts.begin(), employee.contracts.end(), [](const Contract& a, const Contract& b) {return a.cost < b.cost;});
+}
+
+void removeEmployee(std::map<std::string, Employee>& employees, const std::string& fullName)
+{
+    employees.erase(fullName);
+}
+
+int main()
+{
+    try
+    {
+        std::map<std::string, Employee> employees;
+
+        parseFile(employees);
+
+        std::string targetEmployee = "Николаев Николай Николаевич";
+
+        if (employees.find(targetEmployee) != employees.end())
+        {
+            Employee& employee = employees[targetEmployee];
+
+            std::cout << "Total cost: " << calculateTotalCost(employee) << std::endl;
+
+            std::vector<Contract> contracts = listContracts(employee);
+            for (const auto& contract : contracts)
+            {
+                std::cout << "Contract #" << contract.number << ", Work: " << contract.work << ", Cost: " << contract.cost << std::endl;
+            }
+
+            Contract longest = findLongestContract(employee);
+            std::cout << "Longest contract: #" << longest.number << ", End date: " << longest.endDate << std::endl;
+
+            Contract mostExpensive = findMostExpensiveContract(employee);
+            std::cout << "Most expensive contract: #" << mostExpensive.number << ", Cost: " << mostExpensive.cost << std::endl;
+
+            removeEmployee(employees, targetEmployee);
+            std::cout << "Employee removed." << std::endl << std::endl;
+        }
+        else
+        {
+            std::cout << "Employee not found." << std::endl;
+        }
+    }
+    catch (std::exception)
+    {
+        std::cout << "Программа рухнула";
+        return 1;
+    }
+
+    return 0;
+}
