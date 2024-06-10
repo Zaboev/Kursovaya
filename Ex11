@@ -1,0 +1,123 @@
+#include <iostream>
+#include <vector>
+#include <forward_list>
+#include <unordered_map>
+#include <random>
+#include <ctime>
+#include <algorithm>
+
+// Шаблонный класс для хранения билетов
+template <typename T>
+class LotteryStorage
+{
+private:
+    T container;
+public:
+    void addTicket(int ticket)
+    {
+        container.push_back(ticket);
+    }
+
+    T& getContainer()
+    {
+        return container;
+    }
+};
+
+// Специализация шаблона для std::forward_list
+template <>
+class LotteryStorage<std::forward_list<int>>
+{
+private:
+    std::forward_list<int> container;
+public:
+    void addTicket(int ticket)
+    {
+        container.push_front(ticket);
+    }
+
+    std::forward_list<int>& getContainer()
+    {
+        return container;
+    }
+};
+
+// Шаблонный класс лотереи
+template <typename T>
+class Lottery
+{
+private:
+    LotteryStorage<T> tickets;
+    std::unordered_map<int, int> prizeTable; // key: ticket number, value: prize amount
+    std::mt19937 gen;
+
+public:
+    Lottery() : gen(std::random_device{}()) {}
+
+    void generateTickets(int numTickets)
+    {
+        std::uniform_int_distribution<int> dist(1, 1000000);
+        for (int i = 0; i < numTickets; ++i)
+        {
+            tickets.addTicket(dist(gen));
+        }
+    }
+
+    void draw(int numWinningTickets)
+    {
+        auto& container = tickets.getContainer();
+        std::vector<int> ticketVector(container.begin(), container.end());
+        std::shuffle(ticketVector.begin(), ticketVector.end(), gen);
+
+        for (int i = 0; i < numWinningTickets && i < ticketVector.size(); ++i)
+        {
+            int prize = (i + 1) * 100; // Пример логики определения выигрыша
+            prizeTable[ticketVector[i]] = prize;
+        }
+    }
+
+    int checkPrize(int ticket) const
+    {
+        auto it = prizeTable.find(ticket);
+        if (it != prizeTable.end()) {
+            return it->second;
+        }
+        return 0;
+    }
+
+    void printWinningTickets() const
+    {
+        for (const auto& pair : prizeTable)
+        {
+            std::cout << "Ticket " << pair.first << " won " << pair.second << "!\n";
+        }
+    }
+};
+
+int main()
+{
+    try
+    {
+        // Используем std::vector для хранения билетов
+        Lottery<std::vector<int>> lottery;
+        lottery.generateTickets(20000000);
+        lottery.draw(10);
+
+        std::cout << "Winning tickets:\n";
+        lottery.printWinningTickets();
+
+        int ticketNumber = 123456; // Пример номера билета
+        int prize = lottery.checkPrize(ticketNumber);
+        if (prize > 0)
+            std::cout << "Ticket " << ticketNumber << " won " << prize << "!\n";
+        else
+            std::cout << "Ticket " << ticketNumber << " did not win.\n";
+    }
+    catch (std::exception)
+    {
+        std::cout << "Программа рухнула";
+        return 1;
+    }
+
+    return 0;
+}
